@@ -469,7 +469,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
     p.owner !== df.account &&
     players.includes(p.owner) &&
     p.planetLevel >= minCaptureLevel &&
-    checkTypes.includes(p.planetType)
+    checkTypes.includes(p.planetType) 
   ))
     .map(to => {
       return [to, priorityCalculate(to)]
@@ -537,7 +537,8 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       p.owner === df.account &&
       p.planetLevel >= minPlantLevelToUse &&
       p.planetLevel <= maxPlantLevelToUse &&
-      !canHaveArtifact(p)
+      !canHaveArtifact(p) &&
+      Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) < 269100
     )).sort((a, b) => distance(poi[poiPlant][0], a) - distance(poi[poiPlant][0], b));
 
     for (let candidatePlant in candidates) {
