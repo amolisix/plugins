@@ -16,6 +16,9 @@ const {
     PlanetTypeNames,
     PlanetLevel,
     PlanetLevelNames,
+    ArtifactId, 
+    Artifact, 
+    ArtifactType,
   } from "https://cdn.skypack.dev/@darkforest_eth/types";
   
   
