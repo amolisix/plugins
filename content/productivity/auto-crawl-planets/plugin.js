@@ -454,7 +454,7 @@ function distance(from, to) {
 }
 
 function calculatePoi(minCaptureLevel, checkTypes) {
-  debugger;
+  //debugger;
   checkTypes = JSON.parse('[' + String(checkTypes) + ']')
 
   const candidatesOri = df.getPlanetMap();
@@ -468,11 +468,14 @@ function calculatePoi(minCaptureLevel, checkTypes) {
   poi = candidates.filter(p => (
     p.owner !== df.account &&
     players.includes(p.owner) &&
-    p.planetLevel >= minCaptureLevel &&
-    checkTypes.includes(p.planetType) 
+    //set the minium poi level
+    p.planetLevel >= 6 &&
+    checkTypes.includes(p.planetType) &&
+    //set poi radius range
+    Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) > 0
   ))
     .map(to => {
-      return [to, priorityCalculate(to)]
+      return [to, priorityinlevelCalculate(to)]
     })
     .sort((a, b) => a[1] - b[1]);
   console.log("poi");
@@ -538,7 +541,9 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       p.planetLevel >= minPlantLevelToUse &&
       p.planetLevel <= maxPlantLevelToUse &&
       !canHaveArtifact(p) &&
-      Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) < 269100
+      //energy > 80%
+      p.energy > p.energyCap *0.8
+      
     )).sort((a, b) => distance(poi[poiPlant][0], a) - distance(poi[poiPlant][0], b));
 
     for (let candidatePlant in candidates) {
@@ -559,7 +564,8 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
       .filter(p => (p.planetLevel >= minPlanetLevel &&
         p.owner !== df.account &&
         players.includes(p.owner) &&
-        checkTypes.includes(p.planetType)
+        checkTypes.includes(p.planetType) &&
+        p.energy *0.35 < candidatePlant.energy
       ));
   } catch (error) {
     return;
