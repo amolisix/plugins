@@ -448,9 +448,10 @@ function getArrivalsForPlanet(planetId) {
 
 //returns tuples of [planet,distance]
 function distance(from, to) {
-  let fromloc = from.location;
-  let toloc = to.location;
-  return Math.sqrt((fromloc.coords.x - toloc.coords.x) ** 2 + (fromloc.coords.y - toloc.coords.y) ** 2);
+  let fromloc = from.locationId;
+  let toloc = to.locationId;
+  //return Math.sqrt((fromloc.coords.x - toloc.coords.x) ** 2 + (fromloc.coords.y - toloc.coords.y) ** 2);
+  return df.getDist(fromloc, toloc);
 }
 
 function calculatePoi(minCaptureLevel, checkTypes) {
@@ -459,17 +460,18 @@ function calculatePoi(minCaptureLevel, checkTypes) {
 
   const candidatesOri = df.getPlanetMap();
   let candidates = [];
-  let keys = candidatesOri.keys()
-  for (let key of keys) {
-    candidates.push(candidatesOri.get(key));
-  }
+  
+   let keys = candidatesOri.keys()
+   for (let key of keys) {
+     candidates.push(candidatesOri.get(key));
+   }
 
 
   poi = candidates.filter(p => (
     p.owner !== df.account &&
     players.includes(p.owner) &&
     //set the minium poi level
-    p.planetLevel >= 6 &&
+    //p.planetLevel >= 6 &&
     checkTypes.includes(p.planetType) &&
     //set poi radius range
     Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) > 0
@@ -477,7 +479,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
     .map(to => {
       return [to, priorityinlevelCalculate(to)]
     })
-    .sort((a, b) => a[1] - b[1]);
+    .sort((a, b) => b[1] - a[1]);
   console.log("poi");
 }
 
@@ -565,7 +567,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
         p.owner !== df.account &&
         players.includes(p.owner) &&
         checkTypes.includes(p.planetType) &&
-        p.energy *0.35 < candidatePlant.energy
+        p.energy /(p.defense*p.planetLevel) < candidatePlant.energy
       ));
   } catch (error) {
     return;
@@ -584,19 +586,20 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
   const silverBudget = Math.floor(from.silver);
 
   // Rejected if has pending outbound moves
-  const energyUncomfired = df.getUnconfirmedMoves().filter(move => move.from === from.locationId)
+  let energyUncomfired = df.getUnconfirmedMoves().filter(move => move.from === from.locationId)
+  let energyVoyages = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
   let energyUncomfiredOnTheWay = 0;
   for (let moves in energyUncomfired) {
     energyUncomfiredOnTheWay = energyUncomfiredOnTheWay+ energyUncomfired[moves].forces;
   }
-  if (energyUncomfired.length > 4 || (candidatePlant.energy - energyUncomfiredOnTheWay) <= candidatePlant.energyCap *  (1 - maxEnergyPercent) * 0.01) {
+  if (energyUncomfired.length + energyVoyages.length > 4 || (candidatePlant.energy - energyUncomfiredOnTheWay) <= candidatePlant.energyCap *  maxEnergyPercent * 0.01) {
     return 0;
   }
 
 
 
   let i = 0;
-  const energyBudget = Math.floor((maxEnergyPercent / 100) * planet.energy);
+  const energyBudget = Math.floor((maxEnergyPercent / 100) * planet.energyCap);
 
   let energySpent = 0;
   let moves = 0;
@@ -608,45 +611,46 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     const silverLeft = silverBudget - silverSpent;
 
     // Remember its a tuple of candidates and their distance
-    const candidate = comboMap[i++][0];
+    const candidateCapturePlantInstance = comboMap[i++][0];
 
     // Rejected if has unconfirmed pending arrivals
-    const unconfirmed = df.getUnconfirmedMoves().filter(move => move.to === candidate.locationId)
+    const unconfirmed = df.getUnconfirmedMoves().filter(move => move.to === candidateCapturePlantInstance.locationId)
     let energyUncomfired = 0;
     for (let moves in unconfirmed) {
       energyUncomfired = energyUncomfired + unconfirmed[moves].forces;
     }
-    if (unconfirmed.length > 4 || energyUncomfired >= candidate.energy * (candidate.defense / 100)) {
-      continue;
-    }
+    // if (unconfirmed.length > 4 || energyUncomfired >= candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100)) {
+    //   continue;
+    // }
 
     // Rejected if has pending arrivals
-    const arrivals = getArrivalsForPlanet(candidate.locationId);
+    const arrivals = getArrivalsForPlanet(candidateCapturePlantInstance.locationId);
     let energyOntheWay = 0;
     for (let moves in arrivals) {
       energyOntheWay = energyOntheWay + arrivals[moves].energyArriving;
     }
-    if (arrivals.length + unconfirmed.length > 4 || energyOntheWay + energyUncomfired >= candidate.energy * (candidate.defense / 100)) {
+    if (arrivals.length + unconfirmed.length > 4 || energyOntheWay + energyUncomfired >= candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100)) {
       continue;
     }
 
     const energyUncomfiredfrom = df.getUnconfirmedMoves().filter(move => move.from === from.locationId);
+    const energyVoyagesfrom = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
     let energyUncomfiredOnTheWay = 0;
     for (let moves in energyUncomfiredfrom) {
       energyUncomfiredOnTheWay = energyUncomfiredOnTheWay+ energyUncomfiredfrom[moves].forces;
     }
 
-    if (energyUncomfiredfrom.length + df.getAllVoyages().filter(arrival => arrival.fromPlanet === from.locationId).length  > 4 || (candidatePlant.energy - energyUncomfiredOnTheWay) <= candidatePlant.energyCap *  (1 - maxEnergyPercent) * 0.01) {
+    if (energyUncomfiredfrom.length + energyVoyagesfrom.length  > 4 || (candidatePlant.energy - energyUncomfiredOnTheWay) <= candidatePlant.energyCap *  maxEnergyPercent * 0.01) {
       continue;
     }
     
     if (minimumEnergyAllowed === 0) minimumEnergyAllowed = 1
     else
-      minimumEnergyAllowed = candidate.energyCap * minimumEnergyAllowed / 100
-    const energyArriving = minimumEnergyAllowed + (candidate.energy * (candidate.defense / 100));
+      minimumEnergyAllowed = candidateCapturePlantInstance.energyCap * minimumEnergyAllowed / 100
+    const energyArriving = minimumEnergyAllowed + (candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100));
     // needs to be a whole number for the contract
-    let energyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidate.locationId, energyArriving));
-    let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidate.locationId, energyArriving*0.35));
+    let energyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyArriving));
+    let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyArriving/candidateCapturePlantInstance.planetLevel));
     if (energyLeft - energyNeeded-energyUncomfiredOnTheWay < candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01) {
 
       if (allowMultiCrawl === true) {
@@ -664,12 +668,12 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     }
 
 
-    if (from.planetType === 1 && candidate.planetType === 0) {
-      silverNeed = candidate.silverCap > silverLeft ? silverLeft : candidate.silverCap;
+    if (from.planetType === 1 && candidateCapturePlantInstance.planetType === 0) {
+      silverNeed = candidateCapturePlantInstance.silverCap > silverLeft ? silverLeft : candidateCapturePlantInstance.silverCap;
       silverSpent += silverNeed;
     }
 
-    df.move(candidatePlant.locationId, candidate.locationId, energyNeeded, 0);
+    df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
 
     energySpent += energyNeeded;
     moves += 1;
