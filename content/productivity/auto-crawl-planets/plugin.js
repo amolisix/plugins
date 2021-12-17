@@ -471,7 +471,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
     p.owner !== df.account &&
     players.includes(p.owner) &&
     //set the minium poi level
-    //p.planetLevel >= 6 &&
+    p.planetLevel >= minCaptureLevel &&
     checkTypes.includes(p.planetType) &&
     //set poi radius range
     Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) > 0
@@ -605,6 +605,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
   let moves = 0;
   let silverNeed = 0;
   let silverSpent = 0;
+  let minimumEnergyAllowedInNum = 0;
   while (energyBudget - energySpent > 0 && i < comboMap.length) {
 
     const energyLeft = energyBudget - energySpent;
@@ -646,8 +647,8 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     
     if (minimumEnergyAllowed === 0) minimumEnergyAllowed = 1
     else
-      minimumEnergyAllowed = candidateCapturePlantInstance.energyCap * minimumEnergyAllowed / 100
-    const energyArriving = minimumEnergyAllowed + (candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100));
+      minimumEnergyAllowedInNum = candidateCapturePlantInstance.energyCap * minimumEnergyAllowed / 100
+    const energyArriving = minimumEnergyAllowedInNum + (candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100));
     // needs to be a whole number for the contract
     let energyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyArriving));
     let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyArriving/candidateCapturePlantInstance.planetLevel));
