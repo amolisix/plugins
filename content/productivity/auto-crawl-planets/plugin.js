@@ -472,6 +472,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
     players.includes(p.owner) &&
     //set the minium poi level
     p.planetLevel >= minCaptureLevel &&
+    p.planetLevel <= 8 &&   //level 9 is too big
     checkTypes.includes(p.planetType) &&
     //set poi radius range
     Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) > 0
@@ -532,7 +533,7 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
   for (let poiPlant in poi) {
     let candidates_Ori;
     try {
-      candidates_Ori = df.getPlanetsInRange(poi[poiPlant][0].locationId, 95);
+      candidates_Ori = df.getPlanetsInRange(poi[poiPlant][0].locationId, 25);
     } catch (error) {
       continue;
     }
@@ -546,7 +547,7 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       //energy > 80%
       p.energy > p.energyCap *0.8
       
-    )).sort((a, b) => distance(poi[poiPlant][0], a) - distance(poi[poiPlant][0], b));
+    )).sort((a, b) => distance(poi[poiPlant][0], a)*(12-a.planetLevel) - distance(poi[poiPlant][0], b)*(12-b.planetLevel));
 
     for (let candidatePlant in candidates) {
 
@@ -567,14 +568,14 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
         p.owner !== df.account &&
         players.includes(p.owner) &&
         checkTypes.includes(p.planetType) &&
-        p.energy * 100/(p.defense*p.planetLevel) < candidatePlant.energy
+        p.energy * p.defense/(100*p.planetLevel) < candidatePlant.energy
       ));
   } catch (error) {
     return;
   }
 
   let comboMap = candidateCapturePlants.map(p => {
-    return [p, priorityinlevelCalculate(p) + distance(poiPlant, candidatePlant) / distance(poiPlant, p)]
+    return [p, priorityinlevelCalculate(p)*(p.bonus[3]>0?p.bonus[3]:1) + distance(poiPlant, candidatePlant) / (distance(poiPlant, p)+1)]
   }).sort((a, b) => b[1] - a[1]);
 
 
@@ -599,7 +600,8 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
 
 
   let i = 0;
-  const energyBudget = Math.floor((maxEnergyPercent / 100) * planet.energyCap);
+  //const energyBudget = Math.floor((maxEnergyPercent / 100) * planet.energyCap);
+  const energyBudget = planet.energy;
 
   let energySpent = 0;
   let moves = 0;
@@ -647,11 +649,11 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     
     if (minimumEnergyAllowed === 0) minimumEnergyAllowed = 1
     else
-      minimumEnergyAllowedInNum = candidateCapturePlantInstance.energyCap * minimumEnergyAllowed / 100
-    const energyArriving = minimumEnergyAllowedInNum + (candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100));
+      minimumEnergyAllowedInNum = Math.ceil(candidateCapturePlantInstance.energyCap * minimumEnergyAllowed / 100);
+    const energyArriving = minimumEnergyAllowedInNum + Math.ceil(candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100));
     // needs to be a whole number for the contract
     let energyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyArriving));
-    let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, (energyArriving-minimumEnergyAllowedInNum)/candidateCapturePlantInstance.planetLevel));
+    let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, Math.ceil((energyArriving-minimumEnergyAllowedInNum)/candidateCapturePlantInstance.planetLevel)));
     if (energyLeft - energyNeeded-energyUncomfiredfrom < candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01) {
 
       if (allowMultiCrawl === true) {
@@ -661,7 +663,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
 
           // if (df.getAllVoyages().filter(arrival => arrival.fromPlanet === from.locationId).length  > 1)
           //    continue;
-          energyNeeded = energyLeft-energyUncomfiredfrom-candidatePlant.energyCap * (100-maxEnergyPercent)*0.01 ;
+          energyNeeded = Math.ceil(energyLeft-energyUncomfiredfrom-candidatePlant.energyCap * (100-maxEnergyPercent)*0.01) ;
         }
       }
       else
