@@ -7,10 +7,15 @@
 // a webserver that exposes a `/mine` endpoint and connect to it from in-game
 // with this plugin.
 //
-// When running this on https://zkga.me/, you might get an error about blocked
-// insecure content. You probably should install an SSL Certificate on your
-// explore server. If you can't, you can enable mixed content, __but this can be
-// extremely dangerous.__
+// When trying contact a remote server (not also running on your computer) from
+// a webpage like this plugin does it may not work or you may see an error about
+// blocked insecure content. Theres 3 ways make this work:
+// * The right but rather technical way is to install a SSL Certificate on your
+//   server.
+// * Another technical solution is routing your local port to your remote server
+//   as described https://developer.zkga.me/mining/connecting-to-a-remote-headless-miner
+// * Finally a bad but quick solution is to google enabling mixed content in your browser
+//   NOTE however this can be extremely dangerous also allowing any other code to do the same.
 
 import { html, render, useState, useEffect, useLayoutEffect } from 'https://unpkg.com/htm/preact/standalone.module.js';
 import { locationIdFromDecStr } from 'https://cdn.skypack.dev/@darkforest_eth/serde';
@@ -18,6 +23,7 @@ import { locationIdFromDecStr } from 'https://cdn.skypack.dev/@darkforest_eth/se
 const { MinerManager: Miner, SwissCheesePattern, SpiralPattern, TowardsCenterPattern } = df.getConstructors();
 
 const NEW_CHUNK = 'DiscoveredNewChunk';
+const CHUNK_SIZES = [16, 32, 64, 128, 256, 512, 1024];
 
 function getPattern(coords, patternType, chunkSize) {
   if (patternType === 'swiss') {
@@ -249,9 +255,11 @@ function App({
   };
   const select = {
     background: 'rgb(8,8,8)',
+    marginLeft: '5px',
   };
   const [miners, setMiners] = useState(initialMiners);
   const [nextUrl, setNextUrl] = useState(null);
+  const [chunkSize, setChunkSize] = useState(256);
   const [patternType, setPatternType] = useState('spiral');
 
   const onChange = (evt) => {
@@ -260,7 +268,7 @@ function App({
 
   const add = () => {
     if (nextUrl) {
-      const miners = addMiner(nextUrl, patternType);
+      const miners = addMiner(nextUrl, patternType, chunkSize);
       setMiners(miners);
       setNextUrl(null);
     }
@@ -269,6 +277,13 @@ function App({
   const remove = (miner) => {
     const miners = removeMiner(miner);
     setMiners(miners);
+  };
+
+  const changeChunkSize = (evt) => {
+    const newChunkSize = parseInt(evt.target.value);
+    if (newChunkSize) {
+      setChunkSize(newChunkSize);
+    }
   };
 
   const changePattern = (evt) => {
@@ -287,10 +302,19 @@ function App({
           onChange=${onChange}
           placeholder="URL for explore server"
         />
+        <select style=${select} value=${chunkSize} onChange=${changeChunkSize}>
+          <optgroup label="Tile size">
+            ${CHUNK_SIZES.map((size) => html`
+              <option value="${size}">${size}</option>
+            `)}
+          </optgroup>
+        </select>
         <select style=${select} value=${patternType} onChange=${changePattern}>
-          <option value="spiral">Spiral</option>
-          <option value="swiss">Swiss</option>
-          <option value="towardsCenter">TowardsCenter</option>
+          <optgroup label="Pattern">
+            <option value="spiral">Spiral</option>
+            <option value="swiss">Swiss</option>
+            <option value="towardsCenter">TowardsCenter</option>
+          </optgroup>
         </select>
         <button style=${button} onClick=${add}>Explore!</button>
       </div>
