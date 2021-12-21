@@ -16,6 +16,8 @@ import {
   PlanetTypeNames,
   PlanetLevel,
   PlanetLevelNames,
+  //Artifact,
+  ArtifactType,
 } from "https://cdn.skypack.dev/@darkforest_eth/types";
 
 
@@ -525,6 +527,14 @@ function priorityinlevelCalculate(planetObject) {
 
 }
 
+function haveUsefulArtifacts(plant){
+  let ArtifactsQuene = df.getGameObjects().getPlanetArtifacts(plant.LocationId);
+  for (let artifact in ArtifactsQuene){
+       if (artifact.artifactType === ArtifactType.PhotoidCannon)
+         return true;
+  }
+  return false;
+}
 
 
 function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, maxPlantLevelToUse, minimumEnergyAllowed, allowMultiCrawl) {
@@ -543,7 +553,8 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       p.owner === df.account &&
       p.planetLevel >= minPlantLevelToUse &&
       p.planetLevel <= maxPlantLevelToUse &&
-      !canHaveArtifact(p) &&
+      //!canHaveArtifact(p) &&
+      !haveUsefulArtifacts(p)&&
       //energy > 80%
       p.energy > p.energyCap *0.8
       
@@ -575,7 +586,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
   }
 
   let comboMap = candidateCapturePlants.map(p => {
-    return [p, priorityinlevelCalculate(p)*(p.bonus[3]>0?p.bonus[3]:1) + distance(poiPlant, candidatePlant) / (distance(poiPlant, p)+1)]
+    return [p, priorityinlevelCalculate(p)*(p.bonus[3]>0?p.bonus[3]:1)*2 + distance(poiPlant, candidatePlant) / (distance(poiPlant, p)+1)]
   }).sort((a, b) => b[1] - a[1]);
 
 
