@@ -473,7 +473,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
     p.owner !== df.account &&
     players.includes(p.owner) &&
     //set the minium poi level
-    p.planetLevel >= minCaptureLevel &&
+    p.planetLevel >= minCaptureLevel + 2 &&
     p.planetLevel <= 8 &&   //level 9 is too big
     checkTypes.includes(p.planetType) &&
     //set poi radius range
@@ -528,9 +528,9 @@ function priorityinlevelCalculate(planetObject) {
 }
 
 function haveUsefulArtifacts(plant){
-  let ArtifactsQuene = df.getGameObjects().getPlanetArtifacts(plant.LocationId);
+  let ArtifactsQuene = df.getGameObjects().getPlanetArtifacts(plant.locationId);
   for (let artifact in ArtifactsQuene){
-       if (artifact.artifactType === ArtifactType.PhotoidCannon)
+       if (ArtifactsQuene[artifact].artifactType === ArtifactType.PhotoidCannon)
          return true;
   }
   return false;
