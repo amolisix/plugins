@@ -42,6 +42,10 @@ const checkTypes = [];
 let poi = [];
 class Plugin {
   constructor() {
+    this.extendAreaX = 0;
+    this.extendAreaY = 0;
+    this.extendAreaRadius = 10000;
+
     this.planetType = PlanetType.SILVER_MINE;
     this.minimumEnergyAllowed = 15;
     this.minPlanetLevel = 3;
@@ -54,8 +58,53 @@ class Plugin {
     this.allowMultiCrawl = false;
 
   }
-  render(container) {
+  async render(container) {
     container.style.width = '300px';
+
+    let extendAreaXLabel = document.createElement('label');
+    extendAreaXLabel.innerText = 'Extend Area X Location';
+    extendAreaXLabel.style.display = 'block';
+
+    let extendAreaXInput = document.createElement('input');
+    extendAreaXInput.type = 'text';
+    extendAreaXInput.value = `${this.extendAreaX}`;
+    extendAreaXInput.onchange = (evt) => {
+      try {
+        this.extendAreaX = parseInt(evt.target.value, 10);
+      } catch (e) {
+        console.error('could not parse extendAreaX', e);
+      }
+    }
+
+    let extendAreaYLabel = document.createElement('label');
+    extendAreaYLabel.innerText = 'Extend Area Y Location';
+    extendAreaYLabel.style.display = 'block';
+
+    let extendAreaYInput = document.createElement('input');
+    extendAreaYInput.type = 'text';
+    extendAreaYInput.value = `${this.extendAreaY}`;
+    extendAreaYInput.onchange = (evt) => {
+      try {
+        this.extendAreaY = parseInt(evt.target.value, 10);
+      } catch (e) {
+        console.error('could not parse extendAreaY', e);
+      }
+    }
+
+    let extendAreaRadiusLabel = document.createElement('label');
+    extendAreaRadiusLabel.innerText = 'Extend Area Radius';
+    extendAreaRadiusLabel.style.display = 'block';
+
+    let extendAreaRadiusInput = document.createElement('input');
+    extendAreaRadiusInput.type = 'text';
+    extendAreaRadiusInput.value = `${this.extendAreaRadius}`;
+    extendAreaRadiusInput.onchange = (evt) => {
+      try {
+        this.extendAreaRadius = parseInt(evt.target.value, 10);
+      } catch (e) {
+        console.error('could not parse extendAreaRadius', e);
+      }
+    }
 
     let stepperLabel = document.createElement('label');
     stepperLabel.innerText = 'Max % energy to spend';
@@ -333,8 +382,8 @@ class Plugin {
     button.style.marginBottom = '10px';
     button.innerHTML = 'Crawl Plant!'
     button.onclick = () => {
-      calculatePoi(this.minPlanetLevel, checkTypes);
-      crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl);
+      calculatePoi(this.minPlanetLevel, checkTypes,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
+      crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
     }
 
     let autoCrwalLabel = document.createElement('label');
@@ -351,8 +400,8 @@ class Plugin {
           this.message.innerText = 'Auto CrawlPlant...';
 
           setTimeout(() => {
-            calculatePoi(this.minPlanetLevel, checkTypes);
-            crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl);
+            calculatePoi(this.minPlanetLevel, checkTypes,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
+            crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
           }, 0);
         }, 1000 * this.autoSeconds)
       } else {
@@ -376,6 +425,13 @@ class Plugin {
         this.allowMultiCrawl = false;
       }
     };
+
+    container.appendChild(extendAreaXLabel);
+    container.appendChild(extendAreaXInput);
+    container.appendChild(extendAreaYLabel);
+    container.appendChild(extendAreaYInput);
+    container.appendChild(extendAreaRadiusLabel);
+    container.appendChild(extendAreaRadiusInput);
 
     container.appendChild(stepperLabel);
     container.appendChild(stepper);
@@ -440,6 +496,22 @@ class Plugin {
     this.clearSendTimer()
   }
 
+  draw(ctx) {
+    const viewport = ui.getViewport();
+
+    const pixelCenterX = viewport.worldToCanvasX(this.extendAreaX);
+    const pixelCenterY = viewport.worldToCanvasY(this.extendAreaY);
+    const trueRadius = viewport.worldToCanvasDist(this.extendAreaRadius);
+
+    ctx.strokeStyle = '#FFC0CB';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(pixelCenterX, pixelCenterY, trueRadius, 0, 2 * Math.PI);
+    ctx.stroke();
+
+  }
+
+  
 }
 
 export default Plugin;
@@ -456,17 +528,17 @@ function distance(from, to) {
   return df.getDist(fromloc, toloc);
 }
 
-function calculatePoi(minCaptureLevel, checkTypes) {
-  //debugger;
+function calculatePoi(minCaptureLevel, checkTypes,extendAreaX,extendAreaY,extendAreaRadius) {
+  debugger;
   checkTypes = JSON.parse('[' + String(checkTypes) + ']')
 
   const candidatesOri = df.getPlanetMap();
   let candidates = [];
-  
-   let keys = candidatesOri.keys()
-   for (let key of keys) {
-     candidates.push(candidatesOri.get(key));
-   }
+
+  let keys = candidatesOri.keys()
+  for (let key of keys) {
+    candidates.push(candidatesOri.get(key));
+  }
 
 
   poi = candidates.filter(p => (
@@ -477,8 +549,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
     p.planetLevel <= 8 &&   //level 9 is too big
     checkTypes.includes(p.planetType) &&
     //set poi radius range
-    Math.sqrt((p.location.coords.x - 0) ** 2 + (p.location.coords.y - 0) ** 2) > 0
-  ))
+    Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
     .map(to => {
       return [to, priorityinlevelCalculate(to)]
     })
@@ -522,22 +593,22 @@ function priorityinlevelCalculate(planetObject) {
   }
 
   //priority = Math.sqrt((planetObject.coords.x - 0) ** 2 + (planetObject.coords.y - 0) ** 2);
-  
+
   return priority;
 
 }
 
-function haveUsefulArtifacts(plant){
+function haveUsefulArtifacts(plant) {
   let ArtifactsQuene = df.getGameObjects().getPlanetArtifacts(plant.locationId);
-  for (let artifact in ArtifactsQuene){
-       if (ArtifactsQuene[artifact].artifactType === ArtifactType.PhotoidCannon)
-         return true;
+  for (let artifact in ArtifactsQuene) {
+    if (ArtifactsQuene[artifact].artifactType === ArtifactType.PhotoidCannon)
+      return true;
   }
   return false;
 }
 
 
-function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, maxPlantLevelToUse, minimumEnergyAllowed, allowMultiCrawl) {
+function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, maxPlantLevelToUse, minimumEnergyAllowed, allowMultiCrawl,extendAreaX,extendAreaY,extendAreaRadius) {
   debugger;
   //for each plant in poi
   for (let poiPlant in poi) {
@@ -554,22 +625,23 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       p.planetLevel >= minPlantLevelToUse &&
       p.planetLevel <= maxPlantLevelToUse &&
       //!canHaveArtifact(p) &&
-      !haveUsefulArtifacts(p)&&
+      !haveUsefulArtifacts(p) &&
       //energy > 80%
-      p.energy > p.energyCap *0.8
-      
-    )).sort((a, b) => distance(poi[poiPlant][0], a)*(12-a.planetLevel) - distance(poi[poiPlant][0], b)*(12-b.planetLevel));
+      p.energy > p.energyCap * 0.8 &&
+      //in extend area
+      Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
+      .sort((a, b) => distance(poi[poiPlant][0], a) * (12 - a.planetLevel) - distance(poi[poiPlant][0], b) * (12 - b.planetLevel));
 
     for (let candidatePlant in candidates) {
 
-      crawlPlantMy(minPlanetLevel, maxEnergyPercent, poi[poiPlant][0], candidates[candidatePlant], checkTypes, minimumEnergyAllowed, allowMultiCrawl);
+      crawlPlantMy(minPlanetLevel, maxEnergyPercent, poi[poiPlant][0], candidates[candidatePlant], checkTypes, minimumEnergyAllowed, allowMultiCrawl,extendAreaX,extendAreaY,extendAreaRadius);
 
     }
   }
 
 }
 
-function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant, checkTypes, minimumEnergyAllowed = 0, allowMultiCrawl = false) {
+function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant, checkTypes, minimumEnergyAllowed = 0, allowMultiCrawl = false,extendAreaX,extendAreaY,extendAreaRadius) {
   checkTypes = JSON.parse('[' + String(checkTypes) + ']')
 
   let candidateCapturePlants;
@@ -579,14 +651,14 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
         p.owner !== df.account &&
         players.includes(p.owner) &&
         checkTypes.includes(p.planetType) &&
-        p.energy * p.defense/(100*p.planetLevel) < candidatePlant.energy
-      ));
+        p.energy * p.defense / (100 * p.planetLevel) < candidatePlant.energy &&
+        Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius));
   } catch (error) {
     return;
   }
 
   let comboMap = candidateCapturePlants.map(p => {
-    return [p, priorityinlevelCalculate(p)*(p.bonus[3]>0?p.bonus[3]:1)*2 + distance(poiPlant, candidatePlant) / (distance(poiPlant, p)+1)]
+    return [p, priorityinlevelCalculate(p) * (p.bonus[3] > 0 ? p.bonus[3] : 1) * 2 + distance(poiPlant, candidatePlant) / (distance(poiPlant, p) + 1)]
   }).sort((a, b) => b[1] - a[1]);
 
 
@@ -602,9 +674,9 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
   let energyVoyagesFromQuene = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
   let energyUncomfiredFrom = 0;
   for (let moves in energyUncomfiredFromQuene) {
-    energyUncomfiredFrom = energyUncomfiredFrom+ energyUncomfiredFromQuene[moves].forces;
+    energyUncomfiredFrom = energyUncomfiredFrom + energyUncomfiredFromQuene[moves].forces;
   }
-  if (energyUncomfiredFromQuene.length + energyVoyagesFromQuene.length > 4 || (candidatePlant.energy - energyUncomfiredFrom) <= candidatePlant.energyCap *  maxEnergyPercent * 0.01) {
+  if (energyUncomfiredFromQuene.length + energyVoyagesFromQuene.length > 4 || (candidatePlant.energy - energyUncomfiredFrom) <= candidatePlant.energyCap * maxEnergyPercent * 0.01) {
     return 0;
   }
 
@@ -651,30 +723,30 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     const energyVoyagesFromQuene = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
     let energyUncomfiredfrom = 0;
     for (let moves in energyUncomfiredfromQuene) {
-      energyUncomfiredfrom = energyUncomfiredfrom+ energyUncomfiredfromQuene[moves].forces;
+      energyUncomfiredfrom = energyUncomfiredfrom + energyUncomfiredfromQuene[moves].forces;
     }
 
-    if (energyUncomfiredfromQuene.length + energyVoyagesFromQuene.length  > 4 || (candidatePlant.energy - energyUncomfiredfrom) <= candidatePlant.energyCap *  maxEnergyPercent * 0.01) {
+    if (energyUncomfiredfromQuene.length + energyVoyagesFromQuene.length > 4 || (candidatePlant.energy - energyUncomfiredfrom) <= candidatePlant.energyCap * maxEnergyPercent * 0.01) {
       continue;
     }
-    
+
     if (minimumEnergyAllowed === 0) minimumEnergyAllowed = 1
     else
       minimumEnergyAllowedInNum = Math.ceil(candidateCapturePlantInstance.energyCap * minimumEnergyAllowed / 100);
     const energyArriving = minimumEnergyAllowedInNum + Math.ceil(candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100));
     // needs to be a whole number for the contract
     let energyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyArriving));
-    let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, Math.ceil((energyArriving-minimumEnergyAllowedInNum)/candidateCapturePlantInstance.planetLevel)));
-    if (energyLeft - energyNeeded-energyUncomfiredfrom < candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01) {
+    let multiCrawlEnergyNeeded = Math.ceil(df.getEnergyNeededForMove(candidatePlant.locationId, candidateCapturePlantInstance.locationId, Math.ceil((energyArriving - minimumEnergyAllowedInNum) / candidateCapturePlantInstance.planetLevel)));
+    if (energyLeft - energyNeeded - energyUncomfiredfrom < candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01) {
 
       if (allowMultiCrawl === true) {
-        if (energyLeft-multiCrawlEnergyNeeded-energyUncomfiredfrom < candidatePlant.energyCap *(100-maxEnergyPercent)*0.01)
+        if (energyLeft - multiCrawlEnergyNeeded - energyUncomfiredfrom < candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01)
           continue;
         else {
 
           // if (df.getAllVoyages().filter(arrival => arrival.fromPlanet === from.locationId).length  > 1)
           //    continue;
-          energyNeeded = Math.ceil(energyLeft-energyUncomfiredfrom-candidatePlant.energyCap * (100-maxEnergyPercent)*0.01) ;
+          energyNeeded = Math.ceil(energyLeft - energyUncomfiredfrom - candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01);
         }
       }
       else
