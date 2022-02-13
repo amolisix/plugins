@@ -40,11 +40,20 @@ const typeNames = Object.keys(planetTypes);
 const checkTypes = [];
 
 let poi = [];
+let extendAreaCircles = [];
+let canvas = null;
+
+let startAddCircle = false;
+let circleCenterX = 0;
+let circleCenterY = 0;
+let alreadySetCircleCenter = false;
+
 class Plugin {
   constructor() {
-    this.extendAreaX = 0;
-    this.extendAreaY = 0;
-    this.extendAreaRadius = 10000;
+    // this.startAddCircle = false;
+    // this.circleCenterX = 0;
+    // this.circleCenterY = 0;
+    // this.alreadySetCircleCenter = false;
 
     this.planetType = PlanetType.SILVER_MINE;
     this.minimumEnergyAllowed = 15;
@@ -61,49 +70,27 @@ class Plugin {
   async render(container) {
     container.style.width = '300px';
 
-    let extendAreaXLabel = document.createElement('label');
-    extendAreaXLabel.innerText = 'Extend Area X Location';
-    extendAreaXLabel.style.display = 'block';
+    let addCircle = document.createElement('button');
+    addCircle.style.width = '100%';
+    addCircle.style.marginTop = '10px';
+    addCircle.style.marginBottom = '10px';
+    addCircle.innerHTML = 'Add extend area'
+    addCircle.onclick = () => {
+      debugger;
+   //  if(canvas.onclick === null) {
+      canvas.onclick = this.drawCircle;
+    // }
 
-    let extendAreaXInput = document.createElement('input');
-    extendAreaXInput.type = 'text';
-    extendAreaXInput.value = `${this.extendAreaX}`;
-    extendAreaXInput.onchange = (evt) => {
-      try {
-        this.extendAreaX = parseInt(evt.target.value, 10);
-      } catch (e) {
-        console.error('could not parse extendAreaX', e);
-      }
+      startAddCircle = true;
     }
 
-    let extendAreaYLabel = document.createElement('label');
-    extendAreaYLabel.innerText = 'Extend Area Y Location';
-    extendAreaYLabel.style.display = 'block';
-
-    let extendAreaYInput = document.createElement('input');
-    extendAreaYInput.type = 'text';
-    extendAreaYInput.value = `${this.extendAreaY}`;
-    extendAreaYInput.onchange = (evt) => {
-      try {
-        this.extendAreaY = parseInt(evt.target.value, 10);
-      } catch (e) {
-        console.error('could not parse extendAreaY', e);
-      }
-    }
-
-    let extendAreaRadiusLabel = document.createElement('label');
-    extendAreaRadiusLabel.innerText = 'Extend Area Radius';
-    extendAreaRadiusLabel.style.display = 'block';
-
-    let extendAreaRadiusInput = document.createElement('input');
-    extendAreaRadiusInput.type = 'text';
-    extendAreaRadiusInput.value = `${this.extendAreaRadius}`;
-    extendAreaRadiusInput.onchange = (evt) => {
-      try {
-        this.extendAreaRadius = parseInt(evt.target.value, 10);
-      } catch (e) {
-        console.error('could not parse extendAreaRadius', e);
-      }
+    let removeCircles = document.createElement('button');
+    removeCircles.style.width = '100%';
+    removeCircles.style.marginTop = '10px';
+    removeCircles.style.marginBottom = '10px';
+    removeCircles.innerHTML = 'remove all extend area'
+    removeCircles.onclick = () => {
+      extendAreaCircles = [];
     }
 
     let stepperLabel = document.createElement('label');
@@ -382,8 +369,8 @@ class Plugin {
     button.style.marginBottom = '10px';
     button.innerHTML = 'Crawl Plant!'
     button.onclick = () => {
-      calculatePoi(this.minPlanetLevel, checkTypes,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
-      crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
+      calculatePoi(this.minPlanetLevel, checkTypes);
+      crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl);
     }
 
     let autoCrwalLabel = document.createElement('label');
@@ -400,8 +387,8 @@ class Plugin {
           this.message.innerText = 'Auto CrawlPlant...';
 
           setTimeout(() => {
-            calculatePoi(this.minPlanetLevel, checkTypes,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
-            crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl,this.extendAreaX,this.extendAreaY,this.extendAreaRadius);
+            calculatePoi(this.minPlanetLevel, checkTypes);
+            crawlPlantForPoi(this.minPlanetLevel, this.maxEnergyPercent, this.minPlantLevelToUse, this.maxPlantLevelToUse, this.minimumEnergyAllowed, this.allowMultiCrawl);
           }, 0);
         }, 1000 * this.autoSeconds)
       } else {
@@ -426,12 +413,8 @@ class Plugin {
       }
     };
 
-    container.appendChild(extendAreaXLabel);
-    container.appendChild(extendAreaXInput);
-    container.appendChild(extendAreaYLabel);
-    container.appendChild(extendAreaYInput);
-    container.appendChild(extendAreaRadiusLabel);
-    container.appendChild(extendAreaRadiusInput);
+    container.appendChild(addCircle);
+    container.appendChild(removeCircles);
 
     container.appendChild(stepperLabel);
     container.appendChild(stepper);
@@ -497,24 +480,106 @@ class Plugin {
   }
 
   draw(ctx) {
-    const viewport = ui.getViewport();
 
-    const pixelCenterX = viewport.worldToCanvasX(this.extendAreaX);
-    const pixelCenterY = viewport.worldToCanvasY(this.extendAreaY);
-    const trueRadius = viewport.worldToCanvasDist(this.extendAreaRadius);
+    //debugger;
+    if (canvas === null) {
+      canvas = ctx.canvas;
+    }
+
+    const viewport = ui.getViewport();
 
     ctx.strokeStyle = '#FFC0CB';
     ctx.lineWidth = 2;
+
     ctx.beginPath();
-    ctx.arc(pixelCenterX, pixelCenterY, trueRadius, 0, 2 * Math.PI);
+    ctx.arc(viewport.worldToCanvasX(circleCenterX), viewport.worldToCanvasY(circleCenterY), 2, 0, 2 * Math.PI);
     ctx.stroke();
+
+    for (let circle in extendAreaCircles){
+      //debugger;
+      const pixelCenterX = viewport.worldToCanvasX(extendAreaCircles[circle].x);
+      const pixelCenterY = viewport.worldToCanvasY(extendAreaCircles[circle].y);
+      const trueRadius = viewport.worldToCanvasDist(extendAreaCircles[circle].radius);
+
+
+      ctx.beginPath();
+      ctx.arc(pixelCenterX, pixelCenterY, trueRadius, 0, 2 * Math.PI);
+      ctx.stroke();
+
+    }
+
+    // const pixelCenterX = viewport.worldToCanvasX(this.extendAreaX);
+    // const pixelCenterY = viewport.worldToCanvasY(this.extendAreaY);
+    // const trueRadius = viewport.worldToCanvasDist(this.extendAreaRadius);
+
+    // ctx.strokeStyle = '#FFC0CB';
+    // ctx.lineWidth = 2;
+    // ctx.beginPath();
+    // ctx.arc(pixelCenterX, pixelCenterY, trueRadius, 0, 2 * Math.PI);
+    // ctx.stroke();
+
+  }
+  drawCircle(e) {
+    debugger;
+    const viewport = ui.getViewport();
+
+    // 取得画布上被单击的点
+    let clickX = e.pageX - canvas.offsetLeft;
+    let clickY = e.pageY - canvas.offsetTop;
+    let radius = 0;
+    // 为圆圈计算一个随机颜色
+    let colors = ["green", "blue", "red", "yellow", "magenta", "orange", "brown", "purple", "pink"];
+    let color = colors[2];
+
+    if (alreadySetCircleCenter === true) {
+      clickX = e.pageX - canvas.offsetLeft;
+      clickX = viewport.canvasToWorldX(clickX);
+      clickY = e.pageY - canvas.offsetTop;
+      clickY = viewport.canvasToWorldY(clickY);
+      radius = Math.sqrt((clickX - circleCenterX) ** 2 + (clickY - circleCenterY) ** 2);
+      // 创建一个新圆圈
+      let circle = new Circle(circleCenterX, circleCenterY, radius, color);
+
+      // 把它保存在数组中
+      extendAreaCircles.push(circle);
+
+      alreadySetCircleCenter = false;
+      startAddCircle = false;
+      circleCenterX = 0;
+      circleCenterY = 0;
+    }     
+    else if (startAddCircle === true) {
+
+      clickX = e.pageX - canvas.offsetLeft;
+      circleCenterX = viewport.canvasToWorldX(clickX);
+      clickY = e.pageY - canvas.offsetTop;
+      circleCenterY = viewport.canvasToWorldY(clickY);
+      alreadySetCircleCenter = true
+    }
+
 
   }
 
-  
+
 }
 
 export default Plugin;
+
+function checkIfInExtendArea(plant){
+  for (let circle in extendAreaCircles){
+   if(Math.sqrt((plant.location.coords.x - extendAreaCircles[circle].x) ** 2 + (plant.location.coords.y - extendAreaCircles[circle].y) ** 2) > extendAreaCircles[circle].radius) {
+     return false;
+   }
+  }
+  return true;
+}
+
+function Circle(x, y, radius, color) {
+  this.x = x;
+  this.y = y;
+  this.radius = radius;
+  this.color = color;
+}
 
 function getArrivalsForPlanet(planetId) {
   return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
@@ -528,7 +593,7 @@ function distance(from, to) {
   return df.getDist(fromloc, toloc);
 }
 
-function calculatePoi(minCaptureLevel, checkTypes,extendAreaX,extendAreaY,extendAreaRadius) {
+function calculatePoi(minCaptureLevel, checkTypes) {
   debugger;
   checkTypes = JSON.parse('[' + String(checkTypes) + ']')
 
@@ -549,7 +614,8 @@ function calculatePoi(minCaptureLevel, checkTypes,extendAreaX,extendAreaY,extend
     p.planetLevel <= 8 &&   //level 9 is too big
     checkTypes.includes(p.planetType) &&
     //set poi radius range
-    Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
+    //Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
+    checkIfInExtendArea(p)))
     .map(to => {
       return [to, priorityinlevelCalculate(to)]
     })
@@ -608,7 +674,7 @@ function haveUsefulArtifacts(plant) {
 }
 
 
-function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, maxPlantLevelToUse, minimumEnergyAllowed, allowMultiCrawl,extendAreaX,extendAreaY,extendAreaRadius) {
+function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, maxPlantLevelToUse, minimumEnergyAllowed, allowMultiCrawl) {
   debugger;
   //for each plant in poi
   for (let poiPlant in poi) {
@@ -629,19 +695,20 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       //energy > 80%
       p.energy > p.energyCap * 0.8 &&
       //in extend area
-      Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
+      checkIfInExtendArea(p)))
+      //Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
       .sort((a, b) => distance(poi[poiPlant][0], a) * (12 - a.planetLevel) - distance(poi[poiPlant][0], b) * (12 - b.planetLevel));
 
     for (let candidatePlant in candidates) {
 
-      crawlPlantMy(minPlanetLevel, maxEnergyPercent, poi[poiPlant][0], candidates[candidatePlant], checkTypes, minimumEnergyAllowed, allowMultiCrawl,extendAreaX,extendAreaY,extendAreaRadius);
+      crawlPlantMy(minPlanetLevel, maxEnergyPercent, poi[poiPlant][0], candidates[candidatePlant], checkTypes, minimumEnergyAllowed, allowMultiCrawl);
 
     }
   }
 
 }
 
-function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant, checkTypes, minimumEnergyAllowed = 0, allowMultiCrawl = false,extendAreaX,extendAreaY,extendAreaRadius) {
+function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant, checkTypes, minimumEnergyAllowed = 0, allowMultiCrawl = false) {
   checkTypes = JSON.parse('[' + String(checkTypes) + ']')
 
   let candidateCapturePlants;
@@ -652,7 +719,8 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
         players.includes(p.owner) &&
         checkTypes.includes(p.planetType) &&
         p.energy * p.defense / (100 * p.planetLevel) < candidatePlant.energy &&
-        Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius));
+        checkIfInExtendArea(p)))
+        //Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius));
   } catch (error) {
     return;
   }
