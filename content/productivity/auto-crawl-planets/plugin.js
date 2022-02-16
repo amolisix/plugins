@@ -822,13 +822,22 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
     }
 
 
+
     if (from.planetType === 1 && candidateCapturePlantInstance.planetType === 0) {
       silverNeed = candidateCapturePlantInstance.silverCap > silverLeft ? silverLeft : candidateCapturePlantInstance.silverCap;
       silverSpent += silverNeed;
     }
 
-    df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
-    await sleep(1000);
+        //abondan plant 
+    if (candidatePlant.planetLevel <= minPlanetLevel +1 && !canHaveArtifact(candidatePlant) ){
+      df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyLeft, silverLeft, null, true);
+      await sleep(1000);
+    }
+    else{
+      df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
+      await sleep(1000);
+    }
+
 
     energySpent += energyNeeded;
     moves += 1;
