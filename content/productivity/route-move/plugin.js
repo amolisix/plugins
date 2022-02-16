@@ -742,7 +742,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
   let energyVoyagesFromQuene = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
   let energyUncomfiredFrom = 0;
   for (let moves in energyUncomfiredFromQuene) {
-    energyUncomfiredFrom = energyUncomfiredFrom + energyUncomfiredFromQuene[moves].intent.forces;
+    energyUncomfiredFrom = energyUncomfiredFrom + energyUncomfiredFromQuene[moves].forces;
   }
   if (energyUncomfiredFromQuene.length + energyVoyagesFromQuene.length > 4 || (candidatePlant.energy - energyUncomfiredFrom) <= candidatePlant.energyCap * maxEnergyPercent * 0.01) {
     return 0;
@@ -771,7 +771,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     const energyUncomfiredToQuene = df.getUnconfirmedMoves().filter(move => move.to === candidateCapturePlantInstance.locationId)
     let energyUncomfiredTo = 0;
     for (let moves in energyUncomfiredToQuene) {
-      energyUncomfiredTo = energyUncomfiredTo + energyUncomfiredToQuene[moves].intent.forces;
+      energyUncomfiredTo = energyUncomfiredTo + energyUncomfiredToQuene[moves].forces;
     }
     // if (unconfirmed.length > 4 || energyUncomfired >= candidateCapturePlantInstance.energy * (candidateCapturePlantInstance.defense / 100)) {
     //   continue;
@@ -791,7 +791,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     const energyVoyagesFromQuene = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
     let energyUncomfiredfrom = 0;
     for (let moves in energyUncomfiredfromQuene) {
-      energyUncomfiredfrom = energyUncomfiredfrom + energyUncomfiredfromQuene[moves].intent.forces;
+      energyUncomfiredfrom = energyUncomfiredfrom + energyUncomfiredfromQuene[moves].forces;
     }
 
     if (energyUncomfiredfromQuene.length + energyVoyagesFromQuene.length > 4 || (candidatePlant.energy - energyUncomfiredfrom) <= candidatePlant.energyCap * maxEnergyPercent * 0.01) {
