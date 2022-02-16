@@ -708,7 +708,7 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
 
 }
 
-function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant, checkTypes, minimumEnergyAllowed = 0, allowMultiCrawl = false) {
+async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant, checkTypes, minimumEnergyAllowed = 0, allowMultiCrawl = false) {
   checkTypes = JSON.parse('[' + String(checkTypes) + ']')
 
   let candidateCapturePlants;
@@ -738,7 +738,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
   const silverBudget = Math.floor(from.silver);
 
   // Rejected if has pending outbound moves
-  let energyUncomfiredFromQuene = df.getUnconfirmedMoves().filter(move => move.from === from.locationId)
+  let energyUncomfiredFromQuene = df.getUnconfirmedMoves().filter(move => move.intent.from === from.locationId)
   let energyVoyagesFromQuene = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
   let energyUncomfiredFrom = 0;
   for (let moves in energyUncomfiredFromQuene) {
@@ -768,7 +768,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     const candidateCapturePlantInstance = comboMap[i++][0];
 
     // Rejected if has unconfirmed pending arrivals
-    const energyUncomfiredToQuene = df.getUnconfirmedMoves().filter(move => move.to === candidateCapturePlantInstance.locationId)
+    const energyUncomfiredToQuene = df.getUnconfirmedMoves().filter(move => move.intent.to === candidateCapturePlantInstance.locationId)
     let energyUncomfiredTo = 0;
     for (let moves in energyUncomfiredToQuene) {
       energyUncomfiredTo = energyUncomfiredTo + energyUncomfiredToQuene[moves].intent.forces;
@@ -787,7 +787,7 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
       continue;
     }
 
-    const energyUncomfiredfromQuene = df.getUnconfirmedMoves().filter(move => move.from === from.locationId);
+    const energyUncomfiredfromQuene = df.getUnconfirmedMoves().filter(move => move.intent.from === from.locationId);
     const energyVoyagesFromQuene = df.getAllVoyages().filter(move => move.fromPlanet === from.locationId && move.arrivalTime > Date.now() / 1000)
     let energyUncomfiredfrom = 0;
     for (let moves in energyUncomfiredfromQuene) {
@@ -828,9 +828,14 @@ function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidatePlant
     }
 
     df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
+    await sleep(1000);
 
     energySpent += energyNeeded;
     moves += 1;
   }
   return moves;
+}
+
+function sleep (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
 }
