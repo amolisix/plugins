@@ -752,7 +752,7 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
 
   let i = 0;
   //const energyBudget = Math.floor((maxEnergyPercent / 100) * planet.energyCap);
-  const energyBudget = planet.energy;
+  const energyBudget = Math.floor(planet.energy);
 
   let energySpent = 0;
   let moves = 0;
@@ -815,6 +815,11 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
           // if (df.getAllVoyages().filter(arrival => arrival.fromPlanet === from.locationId).length  > 1)
           //    continue;
           energyNeeded = Math.ceil(energyLeft - energyUncomfiredfrom - candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01);
+          df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
+          await sleep(1000);
+          energySpent += energyNeeded;
+          moves += 1;
+          continue;
         }
       }
       else
@@ -823,24 +828,28 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
 
 
 
-    if (from.planetType === 1 && candidateCapturePlantInstance.planetType === 0) {
-      silverNeed = candidateCapturePlantInstance.silverCap > silverLeft ? silverLeft : candidateCapturePlantInstance.silverCap;
-      silverSpent += silverNeed;
-    }
+    // if (from.planetType === 1 && candidateCapturePlantInstance.planetType === 0) {
+    //   silverNeed = candidateCapturePlantInstance.silverCap > silverLeft ? silverLeft : candidateCapturePlantInstance.silverCap;
+    //   silverSpent += silverNeed;
+    // }
 
         //abondan plant 
-    if (candidatePlant.planetLevel <= minPlanetLevel +1 && !canHaveArtifact(candidatePlant) ){
-      df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyLeft, silverLeft, null, true);
+    if (candidatePlant.planetLevel <= minPlanetLevel && !canHaveArtifact(candidatePlant) ){
+      df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, candidatePlant.energy, candidatePlant.silver, null, true);
       await sleep(1000);
+      energySpent += energyLeft;
+      moves += 1;
+      return moves;
     }
     else{
       df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
       await sleep(1000);
+      energySpent += energyNeeded;
+      moves += 1;
     }
 
 
-    energySpent += energyNeeded;
-    moves += 1;
+   
   }
   return moves;
 }
