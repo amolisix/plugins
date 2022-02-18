@@ -41,6 +41,7 @@ const checkTypes = [];
 
 let poi = [];
 let extendAreaCircles = [];
+let alreadyUsedPlants = [];
 let canvas = null;
 
 let startAddCircle = false;
@@ -600,6 +601,7 @@ function calculatePoi(minCaptureLevel, checkTypes) {
   const candidatesOri = df.getPlanetMap();
   let candidates = [];
 
+  alreadyUsedPlants = [];
   let keys = candidatesOri.keys()
   for (let key of keys) {
     candidates.push(candidatesOri.get(key));
@@ -695,7 +697,8 @@ function crawlPlantForPoi(minPlanetLevel, maxEnergyPercent, minPlantLevelToUse, 
       //energy > 80%
       p.energy > p.energyCap * 0.8 &&
       //in extend area
-      checkIfInExtendArea(p)))
+      checkIfInExtendArea(p)&&
+      !alreadyUsedPlants.includes(p.locationId)))
       //Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius))
       .sort((a, b) => distance(poi[poiPlant][0], a) * (12 - a.planetLevel) - distance(poi[poiPlant][0], b) * (12 - b.planetLevel));
 
@@ -719,7 +722,8 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
         players.includes(p.owner) &&
         checkTypes.includes(p.planetType) &&
         p.energy * p.defense / (100 * p.planetLevel) < candidatePlant.energy &&
-        checkIfInExtendArea(p)))
+        checkIfInExtendArea(p)
+        ))
         //Math.sqrt((p.location.coords.x - extendAreaX) ** 2 + (p.location.coords.y - extendAreaY) ** 2) <= extendAreaRadius));
   } catch (error) {
     return;
@@ -815,10 +819,15 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
           // if (df.getAllVoyages().filter(arrival => arrival.fromPlanet === from.locationId).length  > 1)
           //    continue;
           energyNeeded = Math.ceil(energyLeft - energyUncomfiredfrom - candidatePlant.energyCap * (100 - maxEnergyPercent) * 0.01);
-          df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
-          await sleep(1000);
           energySpent += energyNeeded;
+          if(!alreadyUsedPlants.includes(candidatePlant.locationId)){
+            alreadyUsedPlants.push(candidatePlant.locationId);
+          }
+          await df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
+          //await sleep(1000);
+          
           moves += 1;
+
           continue;
         }
       }
@@ -835,21 +844,27 @@ async function crawlPlantMy(minPlanetLevel, maxEnergyPercent, poiPlant, candidat
 
         //abondan plant 
     if (candidatePlant.planetLevel <= minPlanetLevel && !canHaveArtifact(candidatePlant) ){
-      df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, candidatePlant.energy, candidatePlant.silver, null, true);
-      await sleep(1000);
       energySpent += energyLeft;
+      if(!alreadyUsedPlants.includes(candidatePlant.locationId)){
+        alreadyUsedPlants.push(candidatePlant.locationId);
+      }
+      await df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, candidatePlant.energy, candidatePlant.silver, null, true);
+      //await sleep(1000);
+      
       moves += 1;
+
       return moves;
     }
     else{
-      df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
-      await sleep(1000);
       energySpent += energyNeeded;
+      if(!alreadyUsedPlants.includes(candidatePlant.locationId)){
+        alreadyUsedPlants.push(candidatePlant.locationId);
+      }
+      await df.move(candidatePlant.locationId, candidateCapturePlantInstance.locationId, energyNeeded, 0);
+      //await sleep(1000);
+
       moves += 1;
     }
-
-
-   
   }
   return moves;
 }

@@ -125,7 +125,7 @@ import {
         return;
       }
       let currentBlockNumber = df.contractsAPI.ethConnection.blockNumber;
-      let planets = Array.from(df.getMyPlanets()).filter(canHaveArtifact);
+      let planets = Array.from(df.getMyPlanets()).filter(canHaveArtifact).sort((a, b) =>  b.planetLevel - a.planetLevel);
       planets.forEach(planet => {
         if (isFindable(planet, currentBlockNumber)) {
           this.pendingPlanets.push(planet);
